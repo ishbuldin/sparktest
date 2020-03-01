@@ -21,25 +21,34 @@ public class App
                 .getOrCreate();
         String[] paths = {"D:/data/emp/hr/", "D:/data/emp/developers/", "D:/data/emp/managers/"};
         List<String> files = new ArrayList<>(Arrays.asList(paths));
+
         Map<String, Dataset<Row>> dfs = new HashMap<>();
         for (String file : files) {
             Dataset<Row> df = spark.read().option("multiline", true).json(file)
                     .withColumn("department", functions.lit(file.split("/")[3]));
             dfs.put(file, df);
         }
-
         StructType structType = new StructType();
         structType = structType.add("name", DataTypes.StringType, true);
         structType = structType.add("salary", DataTypes.StringType, true);
-        structType = structType.add("department", DataTypes.StringType, false);
-
+        structType = structType.add("department", DataTypes.StringType, true);
         Dataset<Row> ds = spark.createDataFrame(sc.emptyRDD(), structType);
         for (Dataset<Row> row : dfs.values()) {
             ds = ds.union(row);
         }
         ds.show();
-        ds.coalesce(1).write().option("header", true).mode(SaveMode.Overwrite).csv("D:/data/result");
-        ds.select(functions.max("salary")).show();
-        ds.select(functions.sum(functions.col("salary"))).show();
+        ds.coalesce(1)
+                .write()
+                .option("header", true)
+                .mode(SaveMode.Overwrite)
+                .csv("D:/data/result");
+        ds.withColumn("salary", functions.col("salary")
+                .cast(DataTypes.IntegerType))
+                .select(functions.max("salary"))
+                .show();
+        ds.withColumn("salary", functions.col("salary")
+                .cast(DataTypes.IntegerType))
+                .select(functions.sum(functions.col("salary")))
+                .show();
     }
 }
