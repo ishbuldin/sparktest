@@ -24,8 +24,6 @@ public class App2 {
         List<String> files = new ArrayList<>(Arrays.asList(paths));
         JavaPairRDD<String, String> javaPairRDD = sc.wholeTextFiles("D:/data/emp/hr/,D:/data/emp/developers/,D:/data/emp/managers/");
 
-        javaPairRDD.foreach(a -> System.out.println(a._1 + " " + a._2));
-
         StructType structType = new StructType();
         structType = structType.add("department", DataTypes.StringType, true);
         structType = structType.add("json", DataTypes.StringType, true);
@@ -36,9 +34,8 @@ public class App2 {
 
         JavaRDD<Row> javaRDD = javaPairRDD.map(a -> RowFactory.create(getDepartment(a._1()), a._2()));
         Dataset<Row> df = spark.createDataFrame(javaRDD, structType);
-        df.show();
-
-        df.select(functions.from_json(functions.col("json"), json)).show();
+        df.withColumn("parsed_json", functions.from_json(functions.col("json"), json))
+                .select("department","parsed_json.*").show();
     }
 
     private static String getDepartment(String file) {
